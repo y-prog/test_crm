@@ -62,9 +62,9 @@ jobs:
         }
 
     - name: Dump server logs if failed
-        if: failure()
-        shell: pwsh
-        run: |
+      if: failure()
+      shell: pwsh
+      run: |
           Write-Host "📄 Server log output:"
           Get-Content server.log | ForEach-Object { Write-Host $_ }
 
