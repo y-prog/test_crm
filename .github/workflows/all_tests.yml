@@ -35,10 +35,11 @@ jobs:
         dotnet test crm-site/tests/Server.Tests/Server.Tests.csproj --verbosity normal  # Run the unit tests without --no-build
 
     - name: Start API server
-      run: |
-        dotnet run --project crm-site/server/server.csproj &
-        Start-Sleep -Seconds 10
-      shell: pwsh
+  run: |
+    $env:ASPNETCORE_URLS = "http://localhost:3000"
+    dotnet run --project crm-site/server/server.csproj &
+    Start-Sleep -Seconds 10
+  shell: pwsh
 
 
     - name: Run Postman tests
