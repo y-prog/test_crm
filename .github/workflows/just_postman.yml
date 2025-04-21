@@ -1,0 +1,28 @@
+name: Run Postman Tests
+
+on:
+  push:
+    branches:
+      - main  # Trigger this when you push to the `main` branch
+  # or use another event like pull_request, etc.
+
+jobs:
+  postman-tests:
+    runs-on: ubuntu-latest  # This is the OS where the job will run (could be windows-latest, etc.)
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2  # Checks out the latest code from your repo
+
+    - name: Install Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '16'  # You can adjust the Node version as needed
+
+    - name: Install Newman
+      run: |
+        npm install -g newman  # Install Newman (Postman CLI tool)
+
+    - name: Run Postman tests
+      run: |
+        newman run crm-site/postman_test/linustest.postman_collection.json  # Path to your Postman collection
