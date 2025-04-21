@@ -1,28 +1,48 @@
-name: Run Postman Tests
+name: Just Postman Tests
 
 on:
-  push:
-    branches:
-      - main  # Trigger this when you push to the `main` branch
-  # or use another event like pull_request, etc.
+  workflow_dispatch:
 
 jobs:
-  postman-tests:
-    runs-on: ubuntu-latest  # This is the OS where the job will run (could be windows-latest, etc.)
-
+  postman:
+    runs-on: windows-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2  # Checks out the latest code from your repo
+      - uses: actions/checkout@v3
 
-    - name: Install Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '16'  # You can adjust the Node version as needed
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.x'
 
-    - name: Install Newman
-      run: |
-        npm install -g newman  # Install Newman (Postman CLI tool)
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
 
-    - name: Run Postman tests
-      run: |
-        newman run crm-site/postman_test/linustest.postman_collection.json  # Path to your Postman collection
+      - name: Start API server
+        run: |
+          $env:ASPNETCORE_URLS = "http://localhost:3000"
+          dotnet run --project crm-site/server/server.csproj &
+          $serverReady = $false
+          for ($i = 0; $i -lt 10; $i++) {
+            Write-Host "Waiting for server... ($i)"
+            try {
+              $response = Invoke-WebRequest -Uri "http://localhost:3000/api/login" -UseBasicParsing
+              if ($response.StatusCode -eq 200) {
+                $serverReady = $true
+                break
+              }
+            } catch {
+              Start-Sleep -Seconds 2
+            }
+          }
+          if (-not $serverReady) {
+            throw "❌ Server did not start in time."
+          }
+        shell: pwsh
+
+      - name: Install Newman
+        run: npm install -g newman
+
+      - name: Run Postman tests
+        run: newman run crm-site/postman_test/linustest.postman_collection.json
