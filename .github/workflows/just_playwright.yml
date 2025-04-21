@@ -1,0 +1,32 @@
+name: Playwright Tests
+
+on:
+  workflow_dispatch:  # Allows manual triggering
+  push:
+    branches:
+      - main  # Trigger on push to the main branch
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest  # You can use Ubuntu since Playwright supports it well on Linux
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3  # Checkout the code from the repo to the runner
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3  # Set up Node.js environment
+      with:
+        node-version: '20'  # Specify Node.js version
+
+    - name: Install dependencies
+      run: |
+        npm ci  # Install the project dependencies
+
+    - name: Install Playwright
+      run: |
+        npx playwright install  # Install the necessary Playwright dependencies
+
+    - name: Run Playwright tests
+      run: |
+        npx playwright test  # Run Playwright tests
