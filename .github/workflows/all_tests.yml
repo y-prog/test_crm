@@ -1,0 +1,56 @@
+name: Run All Tests
+
+on:
+  push:
+    branches:
+      - main  # Adjust this to your main branch if different
+  pull_request:
+    branches:
+      - main  # Adjust this to your main branch if different
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    # Set up .NET (for xUnit tests)
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: '9.0.202'  # Adjust this if necessary
+
+    # Install .NET dependencies (e.g., restore NuGet packages)
+    - name: Restore dependencies
+      run: dotnet restore crm-site
+
+    # Run xUnit tests
+    - name: Run Unit Tests (xUnit)
+      run: dotnet test crm-site/tests/Server.Tests/UserValidationTests.cs --no-build --verbosity normal
+
+    # Set up Node.js for Playwright and Postman tests
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20.17.0'  # Ensure this is the correct version
+
+    # Install dependencies (Playwright and Newman)
+    - name: Install dependencies
+      run: |
+        cd crm-site
+        npm install playwright newman
+
+    # Run Playwright Tests
+    - name: Run Playwright Tests
+      run: |
+        cd crm-site
+        npx playwright install
+        npx playwright test crm-site/tests/issues/create-issue.spec.ts
+
+    # Run Postman Tests
+    - name: Run Postman Tests
+      run: |
+        cd crm-site/postman_test
+        newman run linustest.postman_collection.json --reporters cli,junit --reporter-junit-export newman-report.xml
