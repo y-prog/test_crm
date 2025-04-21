@@ -38,29 +38,37 @@ jobs:
       shell: pwsh
       run: |
         $env:ASPNETCORE_URLS = "http://localhost:3000"
-        dotnet run --project crm-site/server/server.csproj &
-        Start-Sleep -Seconds 15
+        dotnet run --project crm-site/server/server.csproj > server.log 2>&1 &
+        Start-Sleep -Seconds 2
 
     - name: Wait for server to be ready
       shell: pwsh
       run: |
         for ($i = 0; $i -lt 10; $i++) {
           try {
-            curl http://localhost:3000/api/login
-            break
+            $response = Invoke-WebRequest -Uri http://localhost:3000/api/login -UseBasicParsing
+            if ($response.StatusCode -eq 200) {
+              Write-Host "✅ Server is up!"
+              break
+            }
           } catch {
-            Start-Sleep -Seconds 2
+            Write-Host "Waiting for server... ($i)"
+            Start-Sleep -Seconds 3
+          }
+          if ($i -eq 9) {
+            throw "❌ Server did not start in time."
           }
         }
 
-
     - name: Run Postman tests
+      shell: pwsh
       run: |
-        npm install -g newman  # Install Newman (Postman CLI)
-        newman run crm-site/postman_test/linustest.postman_collection.json  # Run the Postman collection using Newman
+      npm install -g newman
+      newman run crm-site/postman_test/linustest.postman_collection.json
 
     - name: Run Playwright tests
+      shell: pwsh
       run: |
-        npm ci  # Install dependencies (ensure the correct Node.js modules are installed)
-        npx playwright install  # Install Playwright dependencies
-        npx playwright test  # Run Playwright tests
+          npm ci
+          npx playwright install
+          npx playwright test
