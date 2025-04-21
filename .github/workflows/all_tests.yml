@@ -41,6 +41,7 @@ jobs:
         dotnet run --project crm-site/server/server.csproj > server.log 2>&1 &
         Start-Sleep -Seconds 2
 
+
     - name: Wait for server to be ready
       shell: pwsh
       run: |
@@ -59,6 +60,14 @@ jobs:
             throw "❌ Server did not start in time."
           }
         }
+
+    - name: Dump server logs if failed
+        if: failure()
+        shell: pwsh
+        run: |
+          Write-Host "📄 Server log output:"
+          Get-Content server.log | ForEach-Object { Write-Host $_ }
+
 
     - name: Run Postman tests
       shell: pwsh
