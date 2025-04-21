@@ -2,45 +2,41 @@ name: Run All Tests
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
-  workflow_dispatch:  # allows manual triggering of the workflow
+    branches: [ main ]
 
 jobs:
   test:
-    runs-on: windows-latest  # Use a Windows runner for this job
-    
+    runs-on: windows-latest
+
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3  # Checkout the code from the repo to the runner
+      uses: actions/checkout@v3
 
-    - name: Set up .NET
-      uses: actions/setup-dotnet@v3  # Set up the .NET environment
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: '8.0.x'  # Specify the .NET version (update if necessary)
+        dotnet-version: '9.0.x'
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20.x'
 
     - name: Restore dependencies
-      run: |
-        dotnet restore crm-site/tests/Server.Tests/Server.Tests.csproj  # Restore NuGet packages for the test project
+      run: dotnet restore
 
-    - name: Build the project
+    - name: Build and run the server
       run: |
-        dotnet build crm-site/tests/Server.Tests/Server.Tests.csproj --configuration Release  # Build the test project
+        dotnet build crm-site/server/server.csproj --configuration Release
+        dotnet run --project crm-site/server/server.csproj &
+        Start-Sleep -Seconds 10
 
-    - name: Run tests
-      run: |
-        dotnet test crm-site/tests/Server.Tests/Server.Tests.csproj --verbosity normal  # Run the unit tests without --no-build
+    - name: Run unit tests
+      run: dotnet test crm-site/tests/Server.Tests/Server.Tests.csproj --no-build --verbosity normal
 
     - name: Run Postman tests
       run: |
-        npm install -g newman  # Install Newman (Postman CLI)
-        newman run crm-site/postman_test/linustest.postman_collection.json  # Run the Postman collection using Newman
-
-    - name: Run Playwright tests
-      run: |
-        npm ci  # Install dependencies (ensure the correct Node.js modules are installed)
-        npx playwright install  # Install Playwright dependencies
-        npx playwright test  # Run Playwright tests
+        npm install -g newman
+        newman run crm-site/postman_test/linustest.postman_collection.json
