@@ -63,8 +63,8 @@ jobs:
     - name: Run Postman tests
       shell: pwsh
       run: |
-      npm install -g newman
-      newman run crm-site/postman_test/linustest.postman_collection.json
+        npm install -g newman
+        newman run crm-site/postman_test/linustest.postman_collection.json
 
     - name: Run Playwright tests
       shell: pwsh
