@@ -39,7 +39,20 @@ jobs:
       run: |
         $env:ASPNETCORE_URLS = "http://localhost:3000"
         dotnet run --project crm-site/server/server.csproj &
-        Start-Sleep -Seconds 10
+        Start-Sleep -Seconds 15
+
+    - name: Wait for server to be ready
+      shell: pwsh
+      run: |
+        for ($i = 0; $i -lt 10; $i++) {
+          try {
+            curl http://localhost:3000/api/login
+            break
+          } catch {
+            Start-Sleep -Seconds 2
+          }
+        }
+
 
     - name: Run Postman tests
       run: |
