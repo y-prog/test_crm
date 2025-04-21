@@ -24,21 +24,23 @@ jobs:
           $env:ASPNETCORE_URLS = "http://localhost:3000"
           dotnet run --project crm-site/server/server.csproj &
           $serverReady = $false
-          for ($i = 0; $i -lt 10; $i++) {
+          $maxAttempts = 20
+          for ($i = 0; $i -lt $maxAttempts; $i++) {
             Write-Host "Waiting for server... ($i)"
             try {
-              $response = Invoke-WebRequest -Uri "http://localhost:3000/api/login" 
+              $response = Invoke-WebRequest -Uri "http://localhost:3000/api/login" -UseBasicParsing
               if ($response.StatusCode -eq 200) {
-                $serverReady = $true
+                Write-Host "✅ Server is up!"
                 break
               }
             } catch {
-              Start-Sleep -Seconds 2
+              Start-Sleep -Seconds 3
+            }
+            if ($i -eq $maxAttempts - 1) {
+              throw "❌ Server did not start in time."
             }
           }
-          if (-not $serverReady) {
-            throw "❌ Server did not start in time."
-          }
+
         shell: pwsh
 
       - name: Install Newman
