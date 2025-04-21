@@ -1,32 +1,83 @@
-name: Playwright Tests
+name: Run All Tests
 
 on:
-  workflow_dispatch:  # Allows manual triggering
   push:
     branches:
-      - main  # Trigger on push to the main branch
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:  # allows manual triggering of the workflow
 
 jobs:
-  playwright:
-    runs-on: ubuntu-latest  # You can use Ubuntu since Playwright supports it well on Linux
+  test:
+    runs-on: windows-latest  # Use a Windows runner for this job
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v3  # Checkout the code from the repo to the runner
-    
-    - name: Set up Node.js
-      uses: actions/setup-node@v3  # Set up Node.js environment
+
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v3  # Set up the .NET environment
       with:
-        node-version: '20'  # Specify Node.js version
+        dotnet-version: '9.0.x'  # Specify the .NET version (update if necessary)
 
-    - name: Install dependencies
+    - name: Restore dependencies
       run: |
-        npm ci  # Install the project dependencies
+        dotnet restore crm-site/tests/Server.Tests/Server.Tests.csproj  # Restore NuGet packages for the test project
 
-    - name: Install Playwright
+    - name: Build the project
       run: |
-        npx playwright install  # Install the necessary Playwright dependencies
+        dotnet build crm-site/tests/Server.Tests/Server.Tests.csproj --configuration Release  # Build the test project
+
+    - name: Run unit tests
+      run: |
+        dotnet test crm-site/tests/Server.Tests/Server.Tests.csproj --verbosity normal  # Run the unit tests
+
+    - name: Start API server
+      shell: pwsh
+      run: |
+        $env:ASPNETCORE_URLS = "http://localhost:3000"
+        dotnet run --project crm-site/server/server.csproj > server.log 2>&1 &  # Start server in background
+        Start-Sleep -Seconds 10  # Allow time for the server to start
+
+    - name: Wait for server to be ready
+      shell: pwsh
+      run: |
+        for ($i = 0; $i -lt 10; $i++) {
+          try {
+            $response = Invoke-WebRequest -Uri http://localhost:3000/api/login -UseBasicParsing
+            if ($response.StatusCode -eq 200) {
+              Write-Host "✅ Server is up!"
+              break
+            }
+          } catch {
+            Write-Host "Waiting for server... ($i)"
+            Start-Sleep -Seconds 3
+          }
+          if ($i -eq 9) {
+            throw "❌ Server did not start in time."
+          }
+        }
+
+    - name: Dump server logs if failed
+      if: failure()
+      shell: pwsh
+      run: |
+          Write-Host "📄 Server log output:"
+          Get-Content server.log | ForEach-Object { Write-Host $_ }
+
+    - name: Run Postman tests
+      shell: pwsh
+      run: |
+        npm install -g newman
+        newman run crm-site/postman_test/linustest.postman_collection.json
+      continue-on-error: true  # Allow Postman tests to fail without blocking next steps
 
     - name: Run Playwright tests
+      shell: pwsh
       run: |
-        npx playwright test  # Run Playwright tests
+        npm ci
+        npx playwright install
+        npx playwright test crm-site/tests/client/changed-status.spec.ts  # Run the Playwright tests (changed-status)
+        npx playwright test crm-site/tests/client/create-issues.spec.ts  # Run the Playwright tests (create-issues)
