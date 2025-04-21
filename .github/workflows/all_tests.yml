@@ -7,40 +7,40 @@ on:
   pull_request:
     branches:
       - main
-  workflow_dispatch:
+  workflow_dispatch:  # allows manual triggering of the workflow
 
 jobs:
   test:
-    runs-on: windows-latest
+    runs-on: windows-latest  # Use a Windows runner for this job
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v3  # Checkout the code from the repo to the runner
 
     - name: Set up .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v3  # Set up the .NET environment
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: '8.0.x'  # Specify the .NET version (update if necessary)
 
     - name: Restore dependencies
       run: |
-        dotnet restore crm-site/tests/Server.Tests/Server.Tests.csproj
+        dotnet restore crm-site/tests/Server.Tests/Server.Tests.csproj  # Restore NuGet packages for the test project
 
     - name: Build the project
       run: |
-        dotnet build crm-site/tests/Server.Tests/Server.Tests.csproj --configuration Release
+        dotnet build crm-site/tests/Server.Tests/Server.Tests.csproj --configuration Release  # Build the test project
 
     - name: Run tests
       run: |
-        dotnet test crm-site/tests/Server.Tests/Server.Tests.csproj --no-build --verbosity normal
+        dotnet test crm-site/tests/Server.Tests/Server.Tests.csproj --verbosity normal  # Run the unit tests without --no-build
 
     - name: Run Postman tests
       run: |
-        npm install -g newman
-        newman run crm-site/postman_test/linustest.postman_collection.json
+        npm install -g newman  # Install Newman (Postman CLI)
+        newman run crm-site/postman_test/linustest.postman_collection.json  # Run the Postman collection using Newman
 
     - name: Run Playwright tests
       run: |
-        npm ci
-        npx playwright install
-        npx playwright test
+        npm ci  # Install dependencies (ensure the correct Node.js modules are installed)
+        npx playwright install  # Install Playwright dependencies
+        npx playwright test  # Run Playwright tests
